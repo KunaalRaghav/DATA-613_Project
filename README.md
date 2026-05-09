@@ -1,10 +1,12 @@
-# test
-Kunaal
+# App Instructions
+By: Kunaal Raghav
 
-## Quarto
+## Overview
 
-Quarto enables you to weave together content and executable code into a
-finished document. To learn more about Quarto see <https://quarto.org>.
+Hi! My name is Kunaal Raghav. Welcome to the instruction set for my
+Shiny App dashboard on female representation within the Metropolitan
+Museum of Art. For specific details found about the app, and hgow it was
+configured, please look at the details found below.
 
 ## Running Code
 
