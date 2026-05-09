@@ -6,46 +6,98 @@
 #
 #    https://shiny.posit.co/
 #
-
 library(shiny)
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
+  titlePanel("Five-Tab Shiny App"),
+  
+  tabsetPanel(
+    id = "main_tabs",
+    
+    tabPanel(
+      title = "Tab 1",
+      sidebarLayout(
         sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
+          h4("Controls - Tab 1")
+          # add inputs here
         ),
-
-        # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("distPlot")
+          h3("Content - Tab 1")
+          # add outputs here
         )
+      )
+    ),
+    
+    tabPanel(
+      title = "Tab 2",
+      fluidRow(
+        column(
+          width = 4,
+          h4("Left panel - Tab 2")
+          # inputs/outputs
+        ),
+        column(
+          width = 8,
+          h4("Right panel - Tab 2")
+          # inputs/outputs
+        )
+      )
+    ),
+    
+    # ---------------- TAB 3 WITH JPEG BACKGROUND ----------------
+    tabPanel(
+      title = "Tab 3",
+      
+      tags$div(
+        style = "
+          background-image: url('MET.jpeg');
+          background-size: cover;
+          background-repeat: no-repeat;
+          background-position: center;
+          min-height: 100vh;
+          padding: 30px;
+          border-radius: 12px;
+        ",
+        
+        h3("Full-width content - Tab 3"),
+        p("This tab now has a JPEG background from your images folder.")
+      )
+    ),
+    
+    tabPanel(
+      title = "Tab 4",
+      sidebarLayout(
+        sidebarPanel(
+          h4("Controls - Tab 4")
+          # inputs
+        ),
+        mainPanel(
+          h3("Content - Tab 4")
+          # outputs
+        )
+      )
+    ),
+    
+    tabPanel(
+      title = "Tab 5",
+      fluidRow(
+        column(
+          width = 6,
+          h4("Left - Tab 5")
+          # stuff
+        ),
+        column(
+          width = 6,
+          h4("Right - Tab 5")
+          # stuff
+        )
+      )
     )
+  )
 )
 
-# Define server logic required to draw a histogram
-server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white',
-             xlab = 'Waiting time to next eruption (in mins)',
-             main = 'Histogram of waiting times')
-    })
+server <- function(input, output, session) {
+  # add server logic for each tab here
 }
 
-# Run the application 
-shinyApp(ui = ui, server = server)
+shinyApp(ui, server)
