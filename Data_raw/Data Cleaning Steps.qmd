@@ -1,0 +1,544 @@
+---
+title: "Data Cleaning Steps"
+author: "Kunaal Raghav"
+format: pdf
+editor: visual
+---
+
+## Introduction
+
+Welcome to the data cleaning portion of the for the shiny app. In order to clean the data properly, follow the steps in order, as seen below. Make sure to run the code chunks in order, as well
+
+## Packages
+
+In order to clean the data, the following packages must be used. If you ( the reader) wants to clean the data by yourself, remove the hashtags from the lines of code titled "Install Packages", and run the code chunk
+
+```{r}
+#install.packages("readxl")
+#install.packages("tidyverse")
+#install.packages("countrycode")
+#install.packages("writexl")
+library(tidyverse)
+library(readxl)
+library(countrycode)
+library(writexl)
+```
+
+## Importing and converting excel files
+
+After loading the requite packages, the first thing we do is import the excel file into the code here. Look at the r chunk below , to see how the excel file is imported
+
+```{r}
+Data_Frame<- read_excel("../Data_raw/Raw_Image_Notations.xlsx")
+Data_Frame
+
+
+```
+
+## Step 1
+
+After importing the excel file and creating a requite data frame for the excel, the first step we do is to decide what columns we want to keep. Not all the data will of importance, so its important to decide what columns are of grave importance. In code chunk below is the list of columns in the dataset.
+
+```{r}
+names(Data_Frame)
+
+```
+
+Looking at the columns names, the columns of importance to the app are Object ID, Gallery Number,Object End Dates, Department, Object Name, Culture, Artist Display Name, Artist Gender, and Country.
+
+In saving the columns, one must create a new data frame with the saved columns ( listed above). In the chunk below, the new data frame is created
+
+```{r}
+Data_Frame2<- Data_Frame |>
+  select(`Object ID`,Title,`Gallery Number`, `Object End Date`,Department,Country, `Artist Display Name`)
+```
+
+## Step 2
+
+After we create a new data frame with only the new variable of interest, we move onto the next step , which contains two separate phases.
+
+In the first phase, which is shown in the chunk below, the column names must be renamed. Renaming the columns is imperative for the app to run smoothly.
+
+```{r}
+Data_Frame3 <- Data_Frame2 |> 
+  rename(
+    Object_Name = Title,
+    Object_ID = `Object ID`,
+    Gallery_Number= `Gallery Number`,
+    Ascension_Year=  `Object End Date`,
+    Department= Department, 
+    Cultures= Country,
+    Artist_Name = `Artist Display Name`
+  )
+```
+
+In the second phase, done in th chunk below, all empty cells were deleted from the overall data. Data cleaning means that the app runs smoother, and produces better results
+
+```{r}
+Data_Frame4 <- Data_Frame3 |>
+  filter(!if_any(
+    c(Object_Name, Object_ID, Gallery_Number, Ascension_Year, Department, Cultures),
+    ~ is.na(.) | trimws(.) == ""
+  ))
+```
+
+## Step 3
+
+Upon cleaning the data, we realize that not all of variable of interest were included in the data. Additional data of intetest for the app, focused on Artists Sex and the Continent of the object. Thus, in the chunk below, two new columns were created, with Continent and Artists Sex to be included
+
+```{r}
+Data_Frame4 <- Data_Frame4 |>
+  add_column(new_col = "", .after = "Cultures")
+Data_Frame4 <- Data_Frame4 |>
+  rename(Continent = new_col)
+
+Data_Frame4 <- Data_Frame4 |>
+  add_column(new_col = "", .after = "Artist_Name")
+Data_Frame4 <- Data_Frame4 |>
+  rename(Artist_Sex = new_col)
+```
+
+Since both columns are empty , one must fill in the columns. The first column to be addressed is Continent. In the chunk below, the empty cells are replaced with the appropriate continent of the Object
+
+```{r}
+Data_Frame4  <- Data_Frame4 |>
+  mutate(
+    Continent = countrycode(Cultures, "country.name", "continent")
+  )
+
+Data_Frame4  <- Data_Frame4  |>
+  filter(!is.na(Continent))
+```
+
+## Step 4
+
+After filling out the newly created Continent column with the appropriate continent names, we now turn to the Artist_Sex column. In order to input the Artist Sex, data has to be manually applied.
+
+The first step is to look at the unique names in the Artist_Name Column
+
+```{r}
+unique(Data_Frame4$Artist_Name)
+
+```
+
+After looking at the unique names, we create a tibble that has all the names of the authors, with their respective genders attached to their names
+
+```{r}
+df_clean <- Data_Frame4%>%
+  mutate(Name_split = str_split(Artist_Name, "\\|")) %>%
+  unnest(Name_split)
+
+company_pattern <- "(Company|Works|Brothers|Glass|Pottery|Manufactur|Factory|Studios|Shop|Society|Co\\.|&)"
+
+df_people <- df_clean %>%
+  filter(!str_detect(Name_split, company_pattern))
+
+
+
+company_words <- c(
+  "Company","Brothers","Works","Shop","Factory","Manufactory","Furnace",
+  "Foundry","Glass","Pottery","Studio","Firm","Sons","&","Wingender and Brother"
+)
+
+
+
+
+gender_df <- tribble(
+  ~name, ~gender,
+  "James Gillinder and Sons", "Male",
+  "Conrad Henninger", "Male",
+  "John Bailey", "Male",
+  "James Davis", "Male",
+  "John Molineux", "Male",
+  "Revere and Son", "Company",
+  "Paul Revere Jr.", "Male",
+  "Louis C. Tiffany", "Male",
+  "Richard Wittingham", "Male",
+  "Augustus Truesdell", "Male",
+  "John Gaines III", "Male",
+  "Wood and Hughes", "Multiple",
+  "Gustave Herter", "Male",
+  "Henry Connelly", "Male",
+  "Solomon Fussell", "Male",
+  "Hudson and Brooks", "Multiple",
+  "George Jakob Hunzinger", "Male",
+  "George Washington Maher", "Male",
+  "Léon Marcotte", "Male",
+  "Samuel McIntire", "Male",
+  "John and Joseph W. Meeks", "Multiple",
+  "Charles-Honoré Lannuier", "Male",
+  "Duncan Phyfe", "Male",
+  "John Jelliff", "Male",
+  "John Henry Belter", "Male",
+  "Frank Lloyd Wright", "Male",
+  "Archer and Warner", "Company",
+  "Henry N. Hooper", "Male",
+  "Agnes F. Northrop", "Female",
+  "Thomas Danforth Boardman", "Male",
+  "Henry Kellam Hancock", "Male",
+  "Pierre Charles L'Enfant", "Male",
+  "Louis Henry Sullivan", "Male",
+  "Dankmar Adler", "Male",
+  "Curtis and Dunning", "Multiple",
+  "Aaron Willard Jr.", "Male",
+  "Samuel Danforth", "Male",
+  "William Bradford Jr.", "Male",
+  "Josiah Danforth", "Male",
+  "Thomas S. Derby", "Male",
+  "Samuel Green", "Male",
+  "Sylvester Griswold", "Male",
+  "Samuel Hamlin", "Male",
+  "Samuel Ely Hamlin", "Male",
+  "Gershom Jones", "Male",
+  "George Lightner", "Male",
+  "John Skinner", "Male",
+  "Joseph Leddel Sr.", "Male",
+  "Joseph Leddel Jr.", "Male",
+  "William Hook", "Male",
+  "Myer Myers", "Male",
+  "Sherman Boardman", "Male",
+  "Timothy Boardman", "Male",
+  "Ashbil Griswold", "Male",
+  "Oliver Trask", "Male",
+  "Thomas Seymour", "Male",
+  "John Doggett", "Male",
+  "John Ritto Penniman", "Male",
+  "Thomas Wightman", "Male",
+  "Alexander Roux", "Male",
+  "Isaac Broome", "Male",
+  "Ott and Brewer", "Multiple",
+  "Jean-Baptiste Nini", "Male",
+  "Jean Martin Renaud", "Male",
+  "Henry I. Seymour", "Male",
+  "J. and W. Moir", "Multiple",
+  "Benjamin Burnham", "Male",
+  "A. R. Samuels", "Male",
+  "Sebastian Witmer", "Male",
+  "Daniel Greatbatch", "Male",
+  "Master Potter A", "Male",
+  "Hervey Brooks", "Male",
+  "Cristalleries de Saint-Louis", "Company",
+  "Dalzell, Gilmore and Leighton", "Company",
+  "William P. Jervis", "Male",
+  "Knowles, Taylor, and Knowles", "Multiple",
+  "Clara Chipman Newton", "Female",
+  "Robert Palethorp Jr.", "Male",
+  "Kataro Shirayamadani", "Male",
+  "Tiffany Furnaces", "Company",
+  "Albert R. Valentien", "Male",
+  "Isaac N. Youngs", "Male",
+  "Henry Bucher", "Male",
+  "William Buell", "Male",
+  "Christian Selzer", "Male",
+  "John Thurston", "Male",
+  "Stephen Van Wyck", "Male",
+  "Henry Leighton", "Male",
+  "Griffen, Smith and Hill", "Multiple",
+  "James Horton Whitehouse", "Male",
+  "Eugene J. Soligny", "Male",
+  "Augustus Saint-Gaudens", "Male",
+  "Theodore B. Starr", "Male",
+  "John Townsend", "Male",
+  "Thomas Hamersley", "Male",
+  "Daniel Pabst", "Male",
+  "N. Hooper", "Male",
+  "William Sprats", "Male",
+  "Benjamin Gerrish", "Male",
+  "Henry Whitney", "Male",
+  "Christian Dorflinger", "Male",
+  "Rufus Dunham", "Male",
+  "Jacob Hurd", "Male",
+  "Robert R. Jarvie", "Male",
+  "Edward Winslow", "Male",
+  "Barlow", "Male",
+  "John Goddard", "Male",
+  "Michael Allison", "Male",
+  "John Finlay", "Male",
+  "Hugh Finlay", "Male",
+  "Anthony G. Quervelle", "Male",
+  "James Wilson", "Male",
+  "Karl L. H. Müller", "Male",
+  "William Worthington", "Male",
+  "Hercules Courtenay", "Male",
+  "Benjamin Randolph", "Male",
+  "Thomas Affleck", "Male",
+  "Stephen Badlam", "Male",
+  "William Buttre", "Male",
+  "Alexander Jackson Davis", "Male",
+  "Burns and Trainque", "Multiple",
+  "Samuel Gragg", "Male",
+  "Thomas Howard Jr.", "Male",
+  "John Seymour", "Male",
+  "Thomas E. Warren", "Male",
+  "Henry Ingle", "Male",
+  "Thomas Ash", "Male",
+  "Major John Dunlap", "Male",
+  "Samuel Dunlap", "Male",
+  "Lambert Hitchcock", "Male",
+  "Wallace Nutting", "Male",
+  "Slover and Taylor", "Multiple",
+  "Michael Smith", "Male",
+  "Timothy Bridgen", "Male",
+  "Timothy Brigden", "Male",
+  "Johann Christoph Heyne", "Male",
+  "Israel Trask", "Male",
+  "Henry Hopper", "Male",
+  "George Duncan and Sons", "Multiple",
+  "Clark, Coit and Cargill", "Multiple",
+  "Charles Sumner Greene", "Male",
+  "Henry Mather Greene", "Male",
+  "Greene and Greene", "Multiple",
+  "George Anthony Morris", "Male",
+  "Gousse Bonnin", "Male",
+  "American China Manufactory", "Company",
+  "William Crolius", "Male",
+  "Josiah Jones", "Male",
+  "William Searle", "Male",
+  "the Searle-Dennis shop tradition", "Multiple",
+  "Thomas Dennis", "Male",
+  "Nehemiah Randall", "Male",
+  "Gustav Stickley", "Male",
+  "Peter Blin", "Male",
+  "Robert Crosman", "Male",
+  "Frederick Marquand", "Male",
+  "Auguste-Emile Rinquet-Leprince", "Male",
+  "Roswell Gleason", "Male",
+  "Garrett Eoff", "Male",
+  "Florence Koehler", "Female",
+  "Nicholas Roosevelt", "Male",
+  "John Ernest Miller", "Male",
+  "Charles A. Cornwall", "Male",
+  "David Haring", "Male",
+  "Ralph Bagnall Beech", "Male",
+  "Tucker and Hemphill", "Multiple",
+  "John Frederick Amelung", "Male",
+  "Jacob Scholl", "Male",
+  "M. Louise McLaughlin", "Female",
+  "John Bell", "Male",
+  "Timothy Sage", "Male",
+  "Hugh Wishart", "Male",
+  "Edward Lycett", "Male",
+  "Rose factory", "Company",
+  "Thomas Arnold", "Male",
+  "Adrian Bancker", "Male",
+  "Benjamin Burt", "Male",
+  "Samuel Casey", "Male",
+  "W. O. Davis", "Male",
+  "Joseph Edwards Jr.", "Male",
+  "Alonzo C. Young", "Male",
+  "Peter Young", "Male",
+  "Ball, Tompkins and Black", "Multiple",
+  "Garret Forbes", "Male",
+  "William B. Heyer", "Male",
+  "Hyde and Nevins", "Multiple",
+  "William F. Ladd", "Male",
+  "Louis Friedrich Vaupel", "Male",
+  "Lewis and Smith", "Multiple",
+  "Henry Chapman Mercer", "Male",
+  "Rudolph T. Lux", "Male",
+  "George Franklin Lapham", "Male",
+  "Louis Boudo", "Male",
+  "James Harvey Putnam", "Male",
+  "Weller, Brown and Mesmer", "Multiple",
+  "Leopold Eidlitz", "Male",
+  "Harvey Ellis", "Male",
+  "Nehemiah Adams", "Male",
+  "Nathaniel Gould", "Male",
+  "Martin Benedict", "Male",
+  "George Coldwell", "Male",
+  "John Burt Lyng", "Male",
+  "Nathaniel Austin", "Male",
+  "Richard Austin", "Male",
+  "Thomas Badger", "Male",
+  "Frederick Bassett", "Male",
+  "Daniel Curtiss", "Male",
+  "Joseph Danforth", "Male",
+  "John Danforth", "Male",
+  "Thomas Danforth, I", "Male",
+  "Thomas Danforth, III", "Male",
+  "Simon Edgell", "Male",
+  "Jacob Eggleston", "Male",
+  "Lewis Fourniquet", "Male",
+  "Samuel Kilbourn", "Male",
+  "Samuel Minott", "Male",
+  "Amos Treadway", "Male",
+  "Amos Treadway Jr.", "Male",
+  "John Will", "Male",
+  "William Will", "Male",
+  "Alexander Grant", "Male",
+  "Minic Accessories", "Company",
+  "Theophilus Nash", "Male",
+  "Andrea Ferara", "Male",
+  "Simon Willard", "Male",
+  "William LeBaron Jenney", "Male",
+  "William B. Mundie", "Male",
+  "Herman Carl Mueller", "Male",
+  "Lois Whitcomb Rhead", "Female",
+  "Julius Dessoir", "Male",
+  "Hood and Tobey", "Multiple",
+  "Karl Kipp", "Male",
+  "Roycroft", "Company",
+  "C. Dorflinger and Sons", "Company",
+  "Samuel Phippen", "Male",
+  "Aetna Furnace", "Company",
+  "Oxford Furnace", "Company",
+  "A. T.", "Male",
+  "Samuel Flower", "Male",
+  "Henry William Stiegel", "Male",
+  "Nicholas Lutz", "Male",
+  "McCarty and Torreyson", "Multiple",
+  "J. R. Robinson and Sons", "Multiple",
+  "Arthur Heun", "Male",
+  "George Grant Elmslie", "Male",
+  "John Coney", "Male",
+  "I. P. Frink", "Male",
+  "W. H. Edge", "Male",
+  "James Carr", "Male",
+  "Desprez Jr.", "Male",
+  "Antoine Bonnefoy", "Male",
+  "Emile Dupont-Zipcy", "Male",
+  "Gilbert Stuart", "Male",
+  "John Trumbull", "Male",
+  "Edward Savage", "Male",
+  "Charles Willson Peale", "Male",
+  "William F. Shaw", "Male",
+  "Stiegel's Elizabeth Furnace", "Company",
+  "Frederick Clarke Withers", "Male",
+  "John C. Moore", "Male",
+  "Henry Will", "Male",
+  "Gaius Fenn", "Male",
+  "Jason Fenn", "Male",
+  "Damián Hernández", "Male",
+  "Enrique Luis Ventosa", "Male",
+  "Horace Goodwin", "Male",
+  "Mack C. Webster", "Male",
+  "Philip Kline", "Male",
+  "Christian Klinker", "Male",
+  "Mary W. Summey Smith", "Female",
+  "Charles Wingender and Brother", "Multiple",
+  "Frederick Hurten Rhead", "Male",
+  "Peleg Armstrong and Erastus Wentworth", "Multiple",
+  "George Benton and Levi Stewart", "Multiple",
+  "John Crolius", "Male",
+  "Jonathan Fenton", "Male",
+  "C. A. Lawrence", "Male",
+  "Samuel Kirk", "Male",
+  "Daniel Fueter Jr.", "Male",
+  "Lewis Fueter", "Male",
+  "Standish Barry", "Male",
+  "James Gaskins", "Male",
+  "William Hollingshead", "Male",
+  "James Howell", "Male",
+  "Richard Humphreys", "Male",
+  "Richard Lee Jr.", "Male",
+  "Richard Lee", "Male",
+  "Saunders Pitman", "Male",
+  "James D. Stout", "Male",
+  "Philip Syng Jr.", "Male",
+  "Samuel Tingley", "Male",
+  "James Weekes", "Male",
+  "Allen Porter", "Male",
+  "Dirk Van Erp", "Male",
+  "H. Van Buren Magonigle", "Male",
+  "Samuel Yellin", "Male",
+  "Jacob Gerritse Lansing", "Male",
+  "Koenigliche Porzellan Manufaktur", "Company",
+  "John Elliott Sr.", "Male",
+  "Isaac Platt", "Male",
+  "Cartier", "Company",
+  "Charles-Gabriel Sauvage, called Lemire pere", "Male",
+  "John Sawin", "Male",
+  "George W. Dyer", "Male",
+  "Clark Jones", "Male",
+  "David Wolcott Kendall", "Male",
+  "Boardman and Hart", "Multiple",
+  "Moritz Fürst", "Male",
+  "Thomas Claggett", "Male",
+  "Caleb Leach", "Male",
+  "Fred Dikeman", "Male",
+  "Fred and Nancy Lee Dikeman", "Multiple",
+  "Elmkin Hitchcock", "Male",
+  "Francis Bassett, I", "Male",
+  "Francis Bassett, II", "Male",
+  "Parks Boyd", "Male",
+  "Leona Nicholson", "Female",
+  "William Cowell Sr.", "Male",
+  "I. K.", "Male",
+  "J. R.", "Male",
+  "Thomas Cains", "Male",
+  "Kristian Schneider", "Male",
+  "John La Farge", "Male",
+  "Joel Sayre", "Male",
+  "John Sayre", "Male",
+  "William Thomson", "Male",
+  "Ralph Barber", "Male",
+  "William Leighton Sr.", "Male",
+  "McKim, Mead and White", "Company",
+  "Paulding Farnham", "Male",
+  "John Geib Jr.", "Male",
+  "John Geib and Son", "Multiple",
+  "Holmes and Haines", "Multiple",
+  "R. B.", "Male",
+  "Kenneth P. Beattie", "Male",
+  "Charles Coxon", "Male",
+  "Charles J. Boulter", "Male",
+  "Eoff and Conner", "Multiple",
+  "Sidney Risley", "Male",
+  "Morris Holmes", "Male",
+  "Isaac Hutton", "Male",
+  "William McQuilkin", "Male",
+  "Jacob Medinger", "Male",
+  "Millington, Astbury and Poulson", "Multiple",
+  "Norton and Fenton", "Multiple",
+  "George E. Ohr", "Male",
+  "Freeman Porter", "Male",
+  "Philippus Priee", "Male",
+  "Pyatt", "Male",
+  "Charles Osborne", "Male",
+  "William Bromley", "Male",
+  "Walter Scott Lenox", "Male",
+  "Robert and William Wilson", "Multiple",
+  "John Bennett", "Male",
+  "Joseph Siffred Duplessis", "Male",
+  "Jean Antoine Houdon", "Male",
+  "Charles Nicolas Cochin II", "Male",
+  "Benjamin Wilson", "Male",
+  "Charles Volkmar", "Male",
+  "Andrew Uhler", "Male",
+  "Solomon Grimm", "Male",
+  "Heinrich Stofflet", "Male",
+  "John Monday", "Male",
+  "Daniel Dry , active ca. 1820-80", "Male",
+  "Asa Edward Smith", "Male",
+  "Blakeslee Barnes", "Male",
+  "William Billings", "Male",
+  "Robert Bonynge", "Male",
+  "Thomas Byles", "Male",
+  "Samuel Campmell", "Male",
+  "Edward Danforth", "Male"
+)
+
+gender_df
+
+```
+
+Note that all authors/ pieces without any authors name can't be properly identified. In all situations of this case, creators sex was listed as "Unknown"
+
+```{r}
+Data_Frame4 <- Data_Frame4 %>%
+  left_join(gender_df, by = c("Artist_Name" = "name")) %>%
+  mutate(Artist_Sex = gender,
+         Artist_Sex = ifelse(is.na(Artist_Sex), "Unknown", Artist_Sex)) %>%
+  select(-gender)
+
+unique(Data_Frame4$Artist_Sex)
+
+```
+
+## Step 5
+
+Once all of the steps are completed, the data is considered cleaned. The end result can be pushed to the data folder, where it can be used within the app
+
+```{r}
+write_xlsx(Data_Frame4, "../data/METDATA.xlsx")
+```
