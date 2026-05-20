@@ -22,9 +22,10 @@ ui <- fluidPage(
     "))
   ),
   
-  titlePanel(" The MET: A presentation on Female Representation"),
+  titlePanel(" The MET: A Presentation on Female Representation"),
   
   tabsetPanel(
+    id="mainTabs",
     
     # ---------------- DIRECTORY TAB ----------------
     tabPanel("Directory",
@@ -32,8 +33,9 @@ ui <- fluidPage(
                  
                  h3("Welcome to The MET Shiny App"),
                  p("This app is brought to you by Kunaal Raghav."),
-                 p("If you want to find out more about me, you can load up our personal biographies in the input box below."),
-                 p("My bio can be found as a Word file in the data folder of our repository."),
+                 p("If you want to find out more about me, you can load up my personal biography in the input box below."),
+                 p("My bio can be found as a Word file in the data folder of therepository."),
+                 p("For ease of acess, the folder has been called up, and can be see in the dropdown below"),
                  
                  selectInput(
                    "choose_doc",
@@ -50,7 +52,7 @@ ui <- fluidPage(
                    
                    # ---------------- STATS EXAM 1 ----------------
                    tags$li(
-                     "Tab: Stats Examination 1",
+                     actionLink("go_exam1", HTML("<u>Tab: Stats Examination 1</u>")),
                      tags$ul(
                        tags$li("Query: Does the dataset show an increase in the acquisition of female artists’ work in the last 20 years?"),
                        tags$li("Graph 1: Bar chart of sex distribution by year"),
@@ -60,7 +62,7 @@ ui <- fluidPage(
                    
                    # ---------------- STATS EXAM 2 ----------------
                    tags$li(
-                     "Tab: Stats Examination 2",
+                     actionLink("go_exam2", HTML("<u>Tab: Stats Examination 2</u>")),
                      tags$ul(
                        tags$li("Query: How many objects in the Textiles or Costume departments—traditionally female‑dominated labor—are listed without an artist's name compared to the Sculpture department?"),
                        tags$li("Graphs: User selects variables to compare; graphs show artist name included vs. missing across departments")
@@ -69,9 +71,10 @@ ui <- fluidPage(
                    
                    # ---------------- STATS EXAM 3 ----------------
                    tags$li(
-                     "Tab: Stats Examination 3",
+                     actionLink("go_exam3", HTML("<u>Tab: Stats Examination 3</u>")),
+                    
                      tags$ul(
-                       tags$li("Query: What is the percentage of female creators in the Modern and Contemporary Art department versus Medieval Art?"),
+                       tags$li("Query: What is the percentage of female creators in all of the departments?"),
                        tags$li("Graph 1: Bar chart of female creator percentages"),
                        tags$li("Graph 2: Pie chart of female creator proportions")
                      )
@@ -79,9 +82,10 @@ ui <- fluidPage(
                    
                    # ---------------- TEST TAB ----------------
                    tags$li(
-                     "Tab: User Guide",
+                     actionLink("go_userguide", HTML("<u>Tab: User Guide</u>")),
+                     
                      tags$ul(
-                       tags$li("Filter the dataset by Year (Ascension_Year), Country (Cultures), Continent, and Department"),
+                       tags$li("Filter the dataset by Year (Ascension_Year), Country (Cultures), Continent,Department, Artists Name and ARtist Sex"),
                        tags$li("Preview filtered data"),
                        tags$li("Download filtered Excel file"),
                        tags$li("Email the filtered file to yourself")
@@ -120,7 +124,7 @@ ui <- fluidPage(
                )
              ),
              
-             p("In the upload portion found below, please insert the excel file  It can be found in the data folder."),
+             p("In the upload portion found below, please insert the excel file. It can be found in the data folder."),
              p("For ease of usage, a dropdown menu should open up with the ability to choose the excel file of interest."),
              
              selectInput(
@@ -190,8 +194,8 @@ ui <- fluidPage(
                  h3("Statistical Examination 3"),
                  
                  p("This section will answer the following question."),
-                 p("What is the percentage of female creators in the Modern and Contemporary Art department versus Medieval Art?"),
-                 p("In the selection menu below, please select the Stats_Exam_3 excel file"),
+                 p("What is the percentage of female creators in all departments?"),
+                 
                  
                  selectInput(
                    "excel_choice_3",
@@ -219,7 +223,7 @@ ui <- fluidPage(
              div(class = "content-wrapper", style = "background-color: #f3e5f5;",
                  
                  h3("User Guide"),
-                 p("Below is the dropdown menu. While there are multiple excel files. Choose the one titled MET_DATA_Cleaned"),
+                 p("Below is the dropdown menu."),
                  p("This section allows you to create a sheet listing out what art pieces might interest you"),
                  p("In terms of modifying interest areas, one can adjust for specific years of focus, countries and ciontinents of interest, and dpeartment of interest"),
                  p("A sheet should return with the proper filters, which you can donload/email to your email, and use that as a guide"),
@@ -239,6 +243,9 @@ ui <- fluidPage(
                  uiOutput("country_filter"),
                  uiOutput("continent_filter"),
                  uiOutput("department_filter"),
+                 uiOutput("artist_name_filter"),
+                 uiOutput("artist_sex_filter"),
+                 
                  
                  actionButton("apply_filters", "Apply Filters", class = "btn-primary"),
                  
@@ -268,6 +275,22 @@ ui <- fluidPage(
 
 
 server <- function(input, output, session) {
+  observeEvent(input$go_exam1, {
+    updateTabsetPanel(session, "mainTabs", selected = "Stats Examination 1")
+  })
+  
+  observeEvent(input$go_exam2, {
+    updateTabsetPanel(session, "mainTabs", selected = "Stats Examination 2")
+  })
+  
+  observeEvent(input$go_exam3, {
+    updateTabsetPanel(session, "mainTabs", selected = "Stats Examination 3")
+  })
+  
+  observeEvent(input$go_userguide, {
+    updateTabsetPanel(session, "mainTabs", selected = "User Guide")
+  })
+  
   
   # ---------------------------------------------------
   # WORD FILE DOWNLOAD
@@ -519,21 +542,14 @@ server <- function(input, output, session) {
   })
   
   output$year_filter <- renderUI({
-    df <- test_data()
-    req("Ascension_Year" %in% names(df))
-    
-    numeric_years <- suppressWarnings(as.numeric(df$Ascension_Year))
-    numeric_years <- numeric_years[!is.na(numeric_years)]
-    
-    sliderInput(
+    req(test_data())
+    textInput(
       "filter_year",
-      "Select Year Range:",
-      min = min(numeric_years),
-      max = max(numeric_years),
-      value = c(min(numeric_years), max(numeric_years)),
-      step = 1
+      "Enter  Single Year or Range:",
+      placeholder = "Example: 1990 or 1800-2001"
     )
   })
+  
   
   output$country_filter <- renderUI({
     df <- test_data()
@@ -586,6 +602,41 @@ server <- function(input, output, session) {
     )
   })
   
+  output$artist_name_filter <- renderUI({
+    df <- test_data()
+    req("Artist_Name" %in% names(df))
+    
+    selectizeInput(
+      "filter_artist_name",
+      "Select Artist Name:",
+      choices = sort(unique(df$Artist_Name)),
+      selected = NULL,
+      multiple = TRUE,
+      options = list(
+        placeholder = "Type to search artist names...",
+        closeAfterSelect = TRUE
+      )
+    )
+  })
+  
+  output$artist_sex_filter <- renderUI({
+    df <- test_data()
+    req("Artist_Sex" %in% names(df))
+    
+    selectizeInput(
+      "filter_artist_sex",
+      "Select Artist Sex:",
+      choices = sort(unique(df$Artist_Sex)),
+      selected = NULL,
+      multiple = TRUE,
+      options = list(
+        placeholder = "Type to search artist sex...",
+        closeAfterSelect = TRUE
+      )
+    )
+  })
+  
+  
   # ---------------------------------------------------
   # APPLY FILTERS (FIXED)
   # ---------------------------------------------------
@@ -595,12 +646,39 @@ server <- function(input, output, session) {
     # Build OR conditions
     conditions <- list()
     
-    # Year condition
-    if ("Ascension_Year" %in% names(df)) {
-      conditions[["year"]] <- df$Ascension_Year >= input$filter_year[1] &
-        df$Ascension_Year <= input$filter_year[2]
+    # Year condition (supports single years + ranges)
+    if ("Ascension_Year" %in% names(df) && nchar(input$filter_year) > 0) {
+      
+      # Split by comma
+      parts <- trimws(unlist(strsplit(input$filter_year, ",")))
+      all_years <- c()
+      
+      for (p in parts) {
+        # Detect range like "1990-1995"
+        if (grepl("-", p)) {
+          bounds <- trimws(unlist(strsplit(p, "-")))
+          nums <- suppressWarnings(as.numeric(bounds))
+          
+          if (length(nums) == 2 && !any(is.na(nums))) {
+            all_years <- c(all_years, seq(nums[1], nums[2]))
+          }
+          
+        } else {
+          # Single year
+          yr <- suppressWarnings(as.numeric(p))
+          if (!is.na(yr)) {
+            all_years <- c(all_years, yr)
+          }
+        }
+      }
+      
+      # Deduplicate
+      all_years <- unique(all_years)
+      
+      if (length(all_years) > 0) {
+        conditions[["year"]] <- df$Ascension_Year %in% all_years
+      }
     }
-    
     # Country condition
     if ("Cultures" %in% names(df) && length(input$filter_country) > 0) {
       conditions[["country"]] <- df$Cultures %in% input$filter_country
@@ -614,6 +692,16 @@ server <- function(input, output, session) {
     # Department condition
     if ("Department" %in% names(df) && length(input$filter_department) > 0) {
       conditions[["department"]] <- df$Department %in% input$filter_department
+    }
+    
+    # Artist Name condition
+    if ("Artist_Name" %in% names(df) && length(input$filter_artist_name) > 0) {
+      conditions[["artist_name"]] <- df$Artist_Name %in% input$filter_artist_name
+    }
+    
+    # Artist Sex condition
+    if ("Artist_Sex" %in% names(df) && length(input$filter_artist_sex) > 0) {
+      conditions[["artist_sex"]] <- df$Artist_Sex %in% input$filter_artist_sex
     }
     
     # If no filters selected, return full dataset
